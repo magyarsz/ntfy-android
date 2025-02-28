@@ -4,6 +4,7 @@ import android.app.*
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_REMOTE_MESSAGING
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
@@ -98,7 +99,13 @@ class SubscriberService : Service() {
         notificationManager = createNotificationChannel()
         serviceNotification = createNotification(title, text)
 
-        startForeground(NOTIFICATION_SERVICE_ID, serviceNotification)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            // Android 14+
+            startForeground(NOTIFICATION_SERVICE_ID, serviceNotification!!, FOREGROUND_SERVICE_TYPE_REMOTE_MESSAGING)
+        } else {
+            // Android 13 et versions antérieures
+            startForeground(NOTIFICATION_SERVICE_ID, serviceNotification!!)
+        }
     }
 
     override fun onDestroy() {
