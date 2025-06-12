@@ -1,0 +1,62 @@
+name: Cherry-pick specific commit(s) from upstream
+
+on:
+  workflow_dispatch:
+    inputs:
+      upstream_repo:
+        description: 'Upstream repository URL'
+        required: true
+      commits:
+        description: 'Comma separated list of commit hashes to cherry-pick'
+        required: true
+      target_branch:
+        description: 'Target branch name'
+        required: true
+        default: 'dev'
+
+jobs:
+  cherry-pick:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set target branch name as an environment variable
+        run: |
+          echo "TARGET_BRANCH=${{ github.event.inputs.target_branch }}" >> $GITHUB_ENV
+
+      - name: Checkout your repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set Git user info
+        run: |
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "actions@github.com"
+
+      - name: Add upstream repository
+        run: |
+          repo="${{ github.event.inputs.upstream_repo }}"
+          # Check if the URL ends with .git, if not, add it
+          if [[ ! "$repo" =~ \.git$ ]]; then
+            repo="$repo.git"
+          fi
+          echo "Adding upstream repository: $repo"
+          git remote add upstream "$repo"
+          git fetch upstream
+
+      - name: Switch to the target branch for cherry-pick
+        run: |
+          git checkout ${{ env.TARGET_BRANCH }}
+
+      - name: Cherry-pick the specific commit(s)
+        run: |
+          for commit in ${{ github.event.inputs.commits }}; do
+            echo "Cherry-picking commit $commit"
+            git cherry-pick $commit
+          done
+
+      - name: Push branch to your repository
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git push origin ${{ env.TARGET_BRANCH }}
